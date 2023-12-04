@@ -1,6 +1,7 @@
 from Teclado import *
 from Display import *
 from Controle import *
+from InterfaceWeb import *
 import time
 import threading
 import random
