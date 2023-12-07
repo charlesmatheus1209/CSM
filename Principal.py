@@ -29,16 +29,20 @@ acumulador = 0
 volumeDesejado = 50
 while True:
     i += 1
-    iniciaControle = True
+    iniciaControleFluxo = True
     # 1 - Lê teclado
     # 2 - Escreve Display
     # 3 - Se tudo OK, Inicia o controle
     
-    if(iniciaControle):
+    if(iniciaControleFluxo):
         time.sleep(intervalo)
+        
+        #Timer (Deverá ser trocado por outra coisa)
         intervaloReal = time.time() - inicio
         print("Intervalo real: ", intervaloReal)
         inicio = time.time()
+        
+        
         pulsosDoIntervalo = QuantidadeDePulsos()
         Vazao = CalculaVazao(pulsosDoIntervalo, intervaloReal)
         acumulador += (Vazao/60) * intervaloReal
