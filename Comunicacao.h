@@ -9,4 +9,14 @@ bool StringContemLetras(String txt){
   }
   return false;
 }
+
+
+bool VerificacaoExistencia(String Dado, std::vector<String> Vetor){
+  for(String d : Vetor){
+    if(d == Dado){
+      return true;
+    }
+  }
+  return false;
+}
 #endif    comunicacao_h

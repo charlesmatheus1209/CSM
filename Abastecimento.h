@@ -13,7 +13,6 @@
 String NomeArquivoArmazenamento = "/Abastecimentos.txt";
 std::vector <String> Buffer;
 
-
 String listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
 
   String TodosArquivos = "";
@@ -213,6 +212,16 @@ void EnviaPrimeiraLinha() {
   }
 }
 
+void atualizaArquivoConfigInicial (fs::FS &fs, String DadosSerializados){
+  deleteFile(fs, "/ConfigInicial.txt");
+  appendFile(fs, "/ConfigInicial.txt", DadosSerializados.c_str());
+}
+
+
+void atualizaConfigInicial(fs::FS &fs){
+  String meuArquivo = readFileToString(fs, "/ConfigInicial.txt");
+  DeserializarConfigInicial(meuArquivo);
+}
 
 bool EnviaAbastecimento(String stringDeAbastecimento, int retentativa) {
   Serial.println("Tentando Enviar: Digite");
@@ -233,8 +242,20 @@ bool EnviaAbastecimento(String stringDeAbastecimento, int retentativa) {
 void mostraBuffer() {
   Serial.println("Mostrando Buffer...");
   for (int i = 0; i < Buffer.size(); i++) {
-    Serial.println(Buffer[i]);
+    Serial.println("-> " + Buffer[i]);
   }
 }
+
+void atualizaArquivoCupom (fs::FS &fs, int Cupom){
+  deleteFile(fs, "/Cupom.txt");
+  appendFile(fs, "/Cupom.txt", String(Cupom).c_str());
+}
+
+
+int atualizaCupom(fs::FS &fs){
+  String meuArquivo = readFileToString(fs, "/Cupom.txt");
+  return meuArquivo.toInt();
+}
+
 
 #endif    Abastecimento_h

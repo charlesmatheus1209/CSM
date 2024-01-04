@@ -1,8 +1,8 @@
 #include <SoftwareSerial.h>
-
 #include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <vector>
 
 #include "Comunicacao.h"
 #include "Display.h"
@@ -21,7 +21,6 @@ WiFiManager wm;
 
 int PinoInterrupcao = 5;
 
-
 // Variáveis utilizadas no programa principal
 long int T_intervalo = 0;
 
@@ -34,16 +33,20 @@ double Acumulado = 0;
 
 double ValorDoLitro = 5.5;
 
-
 // Armazenamento
 long int TempoRevisaoBufferArquivo = 10000; //(10 seg)
 long int PrevTimeRevisao = 0;
 
-
 String stringDeAbastecimento = "";
 
+int Cupom = 0;
 
 bool flagTimestamp = true;
+
+
+// -------- WiFi ---------
+long int PrevAutoConnect = 0;
+
 
 // ISR -> Função que é chamada quando há interrupção no PinoInterrupção
 void ContaPulsos() {
@@ -63,6 +66,7 @@ void setup() {
 
 
   T_intervalo = millis();
+  PrevAutoConnect = millis();
 
 
   // ------------ SPIFFS -------------
@@ -70,11 +74,14 @@ void setup() {
     Serial.println("SPIFFS Mount Failed");
     return;
   }
+
   PrevTimeRevisao = millis();
   atualizaBuffer(SPIFFS);
   mostraBuffer();
+  atualizaConfigInicial(SPIFFS);
+  ConfigInicial.Mostrar();
 
-
+  Cupom = atualizaCupom(SPIFFS);
 
   WiFi.mode(WIFI_STA);
   wm.setConfigPortalBlocking(true/*false*/);
@@ -92,17 +99,34 @@ void setup() {
 }
 
 void loop() {
-
+  wm.process();
   // --------------- WiFi ---------------
   if (WiFi.status() == WL_CONNECTED) {
+
     //Serial.println("Conectado ao WiFi");
     if (flagTimestamp) {
       timeClient.begin();
       timeClient.setTimeOffset(-3 * 3600);
+
+      String DadosSerializados = Config_Inicial();
+      atualizaArquivoConfigInicial(SPIFFS, DadosSerializados);
+      ConfigInicial.Mostrar();
+
       flagTimestamp = false;
+
     } else {
       timeClient.update();
       //Serial.println(timeClient.getFormattedTime());
+    }
+  }else{
+    if(millis() - PrevAutoConnect > 10000){
+      wm.setConfigPortalBlocking(false);
+      if (!wm.autoConnect()) {
+        Serial.println("Falha ao reconectar ao Wi-Fi");
+      } else {
+        Serial.println("Reconexão bem-sucedida!");
+      }
+      PrevAutoConnect = millis();
     }
   }
 
@@ -135,7 +159,14 @@ void loop() {
     Serial.println("Estado C");
     String Frentista = Teclado.Ler_numero_teclado('C');
     stringDeAbastecimento += Frentista + ";";
-    if (Frentista == "") {
+
+
+
+    if (!VerificacaoExistencia(Frentista, ConfigInicial.FrentistasPossiveis)) {
+      Serial.println("Dado invalido");
+      DisplayLCD.Mostra_msg("Frentista Invalido", "Digite o ID correto!", "", "", 0, 0, 0, 0);
+      delay(2000);
+    } else if (Frentista == "") {
       Serial.println("Dado não digitado");
       DisplayLCD.Mostra_msg("Digite algo e", "Digite apenas", "numeros", "", 2, 4, 6, 0);
       delay(2000);
@@ -153,7 +184,11 @@ void loop() {
     String Veiculo = Teclado.Ler_numero_teclado('D');
     stringDeAbastecimento += Veiculo + ";";
 
-    if (Veiculo == "") {
+    if (!VerificacaoExistencia(Veiculo, ConfigInicial.VeiculosPossiveis)) {
+      Serial.println("Dado invalido");
+      DisplayLCD.Mostra_msg("Veiculo Invalido", "Digite o ID correto!", "", "", 0, 0, 0, 0);
+      delay(2000);
+    } else if (Veiculo == "") {
       Serial.println("Dado não digitado");
       DisplayLCD.Mostra_msg("Digite algo e", "Digite apenas", "numeros", "", 2, 4, 6, 0);
       delay(2000);
@@ -188,8 +223,13 @@ void loop() {
     Serial.println("Estado F");
     String Atividade = Teclado.Ler_numero_teclado('F');
     stringDeAbastecimento += Atividade + ";";
-
-    if (StringContemLetras(Atividade)) {
+    if (Atividade == "") {
+      Estado = "G";
+    } else if (!VerificacaoExistencia(Atividade, ConfigInicial.AtividadesPossiveis)) {
+      Serial.println("Dado invalido");
+      DisplayLCD.Mostra_msg("Atividade Invalido", "Digite o ID correto!", "", "", 0, 0, 0, 0);
+      delay(2000);
+    } else if (StringContemLetras(Atividade)) {
       Serial.println(Atividade);
       DisplayLCD.Mostra_msg("Erro!", "Digite apenas", "numeros", "", 5, 4, 6, 0);
       delay(2000);
@@ -202,8 +242,13 @@ void loop() {
     Serial.println("Estado G");
     String Cultura = Teclado.Ler_numero_teclado('G');
     stringDeAbastecimento += Cultura + ";";
-
-    if (StringContemLetras(Cultura)) {
+    if (Cultura == "") {
+      Estado = "H";
+    } else if (!VerificacaoExistencia(Cultura, ConfigInicial.CulturasPossiveis)) {
+      Serial.println("Dado invalido");
+      DisplayLCD.Mostra_msg("Cultura Invalido", "Digite o ID correto!", "", "", 0, 0, 0, 0);
+      delay(2000);
+    } else if (StringContemLetras(Cultura)) {
       Serial.println(Cultura);
       DisplayLCD.Mostra_msg("Erro!", "Digite apenas", "numeros", "", 5, 4, 6, 0);
       delay(2000);
@@ -253,12 +298,17 @@ void loop() {
     stringDeAbastecimento += String(Acumulado) + ";";
     stringDeAbastecimento += String(timeClient.getFormattedTime()) + ";";
 
+
     Serial.println(stringDeAbastecimento);
+    Cupom++;
     Estado = "I";
   } else if (Estado == "I") { // Envio
     EnviaAbastecimento(stringDeAbastecimento, 0);
-    Estado = "J";
+    Estado = "Z";
+  } else if (Estado == "Z") {
+    Estado = "A";
   }
+
 
 
   // --------------- Revisão Buffer/Arquivo ---------------
@@ -281,9 +331,11 @@ void loop() {
       Serial.println(i);
     }
 
+    atualizaArquivoCupom (SPIFFS, Cupom);
+
+    Serial.println("Cupom: " + String(Cupom));
     mostraBuffer();
-
-
+    ConfigInicial.Mostrar();
   }
 
 
