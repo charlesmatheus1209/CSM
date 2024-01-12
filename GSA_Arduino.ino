@@ -23,7 +23,7 @@ Adafruit_Thermal printer(&mySerial);     // Pass addr to printer constructor
 
 // ------------- Data e Hora -------------
 const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = -3*3600;
+const long  gmtOffset_sec = -3 * 3600;
 const int   daylightOffset_sec = 3600;
 
 // ------------- Gerenciador de WiFi -------------
@@ -78,24 +78,26 @@ String getLocalTime() {
     return "";
   }
   //Serial.println(&timeinfo, "%d/%m/%y %H:%M:%S");
-  strftime (MeuBuffer,80,"%d/%m/%y %H:%M:%S.",&timeinfo);
+  strftime (MeuBuffer, 80, "%d/%m/%y %H:%M:%S.", &timeinfo);
   return String(MeuBuffer);
 }
 
 
 void setup() {
 
-   // Inicilização da comunicação com a Impressora
-   mySerial.begin(9600);
-   printer.begin(); 
+  // Inicilização da comunicação com a Impressora
+  mySerial.begin(9600);
+  printer.begin();
 
 
   Serial.begin(115200);
   Serial.println(F("Iniciando Sistema Arduino"));
 
+
+
   attachInterrupt(digitalPinToInterrupt(PinoInterrupcao), ContaPulsos, RISING);
 
-  
+
   DisplayLCD.Inicializa_display();
 
 
@@ -110,7 +112,7 @@ void setup() {
   }
 
   PrevTimeRevisao = millis();
-  
+
   atualizaBuffer(SPIFFS);
   mostraBuffer();
   atualizaConfigInicial(SPIFFS);
@@ -133,37 +135,40 @@ void setup() {
 
 }
 
+
 void loop() {
   wm.process();
-  
- 
+
+
   // --------------- WiFi ---------------
-  if (WiFi.status() == WL_CONNECTED) {
+  if (Estado == "A") {
+    if (WiFi.status() == WL_CONNECTED) {
 
-    //Serial.println("Conectado ao WiFi");
-    if (flagTimestamp) {
-      configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+      //Serial.println("Conectado ao WiFi");
+      if (flagTimestamp) {
+        configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
-      String DadosSerializados = Config_Inicial();
-      atualizaArquivoConfigInicial(SPIFFS, DadosSerializados);
-      ConfigInicial.Mostrar();
+        String DadosSerializados = Config_Inicial();
+        atualizaArquivoConfigInicial(SPIFFS, DadosSerializados);
+        ConfigInicial.Mostrar();
 
-      flagTimestamp = false;
+        flagTimestamp = false;
 
-    } else {
-      getLocalTime();
-    }
-  }else{
-    if(millis() - PrevAutoConnect > 10000){
-      WiFi.mode(WIFI_STA);
-      wm.setConfigPortalBlocking(false);
-      wm.setConfigPortalTimeout(60);
-      if (!wm.autoConnect()) {
-        Serial.println("Falha ao reconectar ao Wi-Fi");
       } else {
-        Serial.println("Reconexão bem-sucedida!");
+        getLocalTime();
       }
-      PrevAutoConnect = millis();
+    } else {
+      if (millis() - PrevAutoConnect > 10000) {
+        WiFi.mode(WIFI_STA);
+        wm.setConfigPortalBlocking(false);
+        wm.setConfigPortalTimeout(60);
+        if (!wm.autoConnect()) {
+          Serial.println("Falha ao reconectar ao Wi-Fi");
+        } else {
+          Serial.println("Reconexão bem-sucedida!");
+        }
+        PrevAutoConnect = millis();
+      }
     }
   }
 
@@ -176,6 +181,7 @@ void loop() {
     } else {
       if (millis() - T_intervalo > 1000) {
         Serial.println("Estado A");
+        Serial.println(xPortGetCoreID());
         DisplayLCD.Mostra_msg("A -> Abastecer", "D -> Manutencao", "", "", 0, 0, 0, 0);
         T_intervalo = millis();
       }
@@ -195,7 +201,7 @@ void loop() {
   } else if (Estado == "C") { // FRENTISTA
     Serial.println("Estado C");
     String Frentista = Teclado.Ler_numero_teclado('C');
-    
+
 
 
 
@@ -221,7 +227,7 @@ void loop() {
   } else if (Estado == "D") { // VEICULO -- ID da Máquina
     Serial.println("Estado D");
     String Veiculo = Teclado.Ler_numero_teclado('D');
-    
+
 
     if (!VerificacaoExistencia(Veiculo, ConfigInicial.VeiculosPossiveis)) {
       Serial.println("Dado invalido");
@@ -245,7 +251,7 @@ void loop() {
   } else if (Estado == "E") { // HODÔMETRO -- HORÍMETRO
     Serial.println("Estado E");
     String Hodometro_Horimetro = Teclado.Ler_numero_teclado('E');
-    
+
 
     if (Hodometro_Horimetro == "") {
       Serial.println("Dado não digitado");
@@ -265,7 +271,7 @@ void loop() {
   } else if (Estado == "F") { // Atividade -- Opcional
     Serial.println("Estado F");
     String Atividade = Teclado.Ler_numero_teclado('F');
-    
+
     if (Atividade == "") {
       Estado = "G";
     } else if (!VerificacaoExistencia(Atividade, ConfigInicial.AtividadesPossiveis)) {
@@ -286,7 +292,7 @@ void loop() {
   } else if (Estado == "G") { // Cultura -- Opcional
     Serial.println("Estado G");
     String Cultura = Teclado.Ler_numero_teclado('G');
-    
+
     if (Cultura == "") {
       Estado = "H";
     } else if (!VerificacaoExistencia(Cultura, ConfigInicial.CulturasPossiveis)) {
@@ -367,7 +373,7 @@ void loop() {
     PrevTimeRevisao = millis();
 
     Serial.println("Intervalo 10 seg....");
-    
+
     if (Buffer.size() > 0) {
       Serial.println("Buffer Maior que zero");
       if (EnviaAbastecimento(Buffer[0], 1)) {

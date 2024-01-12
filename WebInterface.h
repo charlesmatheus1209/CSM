@@ -76,10 +76,11 @@ bool EnviaParaServidor(String Abastecimento) {
       Serial.println(response);           //Print request answer
       delay(5000);
       return true;
-    } else if (httpCode > 0) {
+    } else if (httpResponseCode > 0) {
       String payload = http.getString();
-      Serial.println("Status Code: " + String(httpCode));
+      Serial.println("Status Code: " + String(httpResponseCode));
       Serial.println(payload);
+      return false;
     }
     else {
       Serial.print("Error on sending POST: ");
