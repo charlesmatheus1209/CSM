@@ -43,12 +43,13 @@ void loop() {
     Serial.println("valor foi: " + String(valor));
     delay(2000);
     CONST_CONVERSAO = String(valor).toDouble();
+    int TempoTotal = millis();
     while (1) {
       delay(Intervalo);
       Serial.print("Pulsos: ");
       Serial.println(Pulsos);
       Serial.println("Fator de Conversão: " + String(CONST_CONVERSAO));
-
+      
       if (Pulsos == 0) {
         incremento ++;
 
@@ -73,6 +74,11 @@ void loop() {
       Serial.println(Acumulado);
       Pulsos = 0;
     }
+    
+    Serial.print("Tempo Total = ");
+    TempoTotal -= 10000;
+    Serial.println(millis()-TempoTotal);
+
     Serial.println("Chegueiii");
   }
 
