@@ -4,14 +4,39 @@
 
 #include "FS.h"
 #include "SPIFFS.h"
+#include "WebInterface.h"
 
 /* You only need to format SPIFFS the first time you run a
    test or else use the SPIFFS plugin to create a partition
    https://github.com/me-no-dev/arduino-esp32fs-plugin */
 #define FORMAT_SPIFFS_IF_FAILED true
 
+class Abastecimento{
+  public: 
+    String Frentista = "";
+    String Veiculo = "";
+    String Hodometro_Horimetro = "";
+    String Atividade = "";
+    String Cultura = "";
+    String Cupom = "";
+    String Litros = "";
+    String Timestamp = "";
+
+    void Limpar(){
+      this->Frentista = "";
+      this->Veiculo = "";
+      this->Hodometro_Horimetro = "";
+      this->Atividade = "";
+      this->Cultura = "";
+      this->Cupom = "";
+      this->Litros = "";
+      this->Timestamp = "";
+    }
+};
+
 String NomeArquivoArmazenamento = "/Abastecimentos.txt";
-std::vector <String> Buffer;
+Abastecimento abastecimento = Abastecimento();
+
 
 String listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
 

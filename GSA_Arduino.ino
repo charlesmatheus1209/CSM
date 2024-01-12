@@ -1,21 +1,35 @@
 #include <SoftwareSerial.h>
 #include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
-#include <NTPClient.h>
+#include "time.h"
 #include <WiFiUdp.h>
 #include <vector>
 
-#include "Comunicacao.h"
-#include "Display.h"
+std::vector <String> Buffer;
+
+#include "Adafruit_Thermal.h"
 #include "Funcoes_Extras.h"
 #include "Teclado.h"
 #include "WebInterface.h"
 #include "Abastecimento.h"
+#include "Display.h"
 
+// ------------- Impressão/Comunicação com a impressora -------------
+#define TX_PIN 4 // Arduino transmit  YELLOW WIRE  labeled RX on printer
+#define RX_PIN 23 // Arduino receive   GREEN WIRE   labeled TX on printer
 
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP);
+SoftwareSerial mySerial(RX_PIN, TX_PIN); // Declare SoftwareSerial obj first
+Adafruit_Thermal printer(&mySerial);     // Pass addr to printer constructor
+#include "Comunicacao.h"
 
+// ------------- Data e Hora -------------
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = -3*3600;
+const int   daylightOffset_sec = 3600;
+
+// ------------- Gerenciador de WiFi -------------
 WiFiManager wm;
+
+
 
 // Declarações de pinos
 
@@ -48,6 +62,7 @@ bool flagTimestamp = true;
 long int PrevAutoConnect = 0;
 
 
+
 // ISR -> Função que é chamada quando há interrupção no PinoInterrupção
 void ContaPulsos() {
   Pulsos += 1;
@@ -55,13 +70,32 @@ void ContaPulsos() {
   //  Serial.println(Pulsos);
 }
 
+String getLocalTime() {
+  struct tm timeinfo;
+  char MeuBuffer[80];
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return "";
+  }
+  //Serial.println(&timeinfo, "%d/%m/%y %H:%M:%S");
+  strftime (MeuBuffer,80,"%d/%m/%y %H:%M:%S.",&timeinfo);
+  return String(MeuBuffer);
+}
+
+
 void setup() {
+
+   // Inicilização da comunicação com a Impressora
+   mySerial.begin(9600);
+   printer.begin(); 
+
 
   Serial.begin(115200);
   Serial.println(F("Iniciando Sistema Arduino"));
 
-  attachInterrupt(  digitalPinToInterrupt(PinoInterrupcao), ContaPulsos, RISING);
+  attachInterrupt(digitalPinToInterrupt(PinoInterrupcao), ContaPulsos, RISING);
 
+  
   DisplayLCD.Inicializa_display();
 
 
@@ -76,6 +110,7 @@ void setup() {
   }
 
   PrevTimeRevisao = millis();
+  
   atualizaBuffer(SPIFFS);
   mostraBuffer();
   atualizaConfigInicial(SPIFFS);
@@ -100,13 +135,14 @@ void setup() {
 
 void loop() {
   wm.process();
+  
+ 
   // --------------- WiFi ---------------
   if (WiFi.status() == WL_CONNECTED) {
 
     //Serial.println("Conectado ao WiFi");
     if (flagTimestamp) {
-      timeClient.begin();
-      timeClient.setTimeOffset(-3 * 3600);
+      configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
       String DadosSerializados = Config_Inicial();
       atualizaArquivoConfigInicial(SPIFFS, DadosSerializados);
@@ -115,12 +151,13 @@ void loop() {
       flagTimestamp = false;
 
     } else {
-      timeClient.update();
-      //Serial.println(timeClient.getFormattedTime());
+      getLocalTime();
     }
   }else{
     if(millis() - PrevAutoConnect > 10000){
+      WiFi.mode(WIFI_STA);
       wm.setConfigPortalBlocking(false);
+      wm.setConfigPortalTimeout(60);
       if (!wm.autoConnect()) {
         Serial.println("Falha ao reconectar ao Wi-Fi");
       } else {
@@ -132,7 +169,7 @@ void loop() {
 
   // --------------- Controle Geral ---------------
   if (Estado == "A") { // ESTADO DE ESPERA
-
+    abastecimento.Limpar();
     if (flagTimestamp) {
       DisplayLCD.Mostra_msg("", "Configure o WiFi", "", "", 0, 0, 0, 0);
       delay(100);
@@ -158,7 +195,7 @@ void loop() {
   } else if (Estado == "C") { // FRENTISTA
     Serial.println("Estado C");
     String Frentista = Teclado.Ler_numero_teclado('C');
-    stringDeAbastecimento += Frentista + ";";
+    
 
 
 
@@ -178,11 +215,13 @@ void loop() {
       Estado = "A";
     } else {
       Estado = "D";
+      abastecimento.Frentista = Frentista;
+      stringDeAbastecimento += Frentista + ";";
     }
   } else if (Estado == "D") { // VEICULO -- ID da Máquina
     Serial.println("Estado D");
     String Veiculo = Teclado.Ler_numero_teclado('D');
-    stringDeAbastecimento += Veiculo + ";";
+    
 
     if (!VerificacaoExistencia(Veiculo, ConfigInicial.VeiculosPossiveis)) {
       Serial.println("Dado invalido");
@@ -200,11 +239,13 @@ void loop() {
       Estado = "C";
     } else {
       Estado = "E";
+      abastecimento.Veiculo = Veiculo;
+      stringDeAbastecimento += Veiculo + ";";
     }
   } else if (Estado == "E") { // HODÔMETRO -- HORÍMETRO
     Serial.println("Estado E");
     String Hodometro_Horimetro = Teclado.Ler_numero_teclado('E');
-    stringDeAbastecimento += Hodometro_Horimetro + ";";
+    
 
     if (Hodometro_Horimetro == "") {
       Serial.println("Dado não digitado");
@@ -218,11 +259,13 @@ void loop() {
       Estado = "D";
     } else {
       Estado = "F";
+      abastecimento.Hodometro_Horimetro = Hodometro_Horimetro;
+      stringDeAbastecimento += Hodometro_Horimetro + ";";
     }
   } else if (Estado == "F") { // Atividade -- Opcional
     Serial.println("Estado F");
     String Atividade = Teclado.Ler_numero_teclado('F');
-    stringDeAbastecimento += Atividade + ";";
+    
     if (Atividade == "") {
       Estado = "G";
     } else if (!VerificacaoExistencia(Atividade, ConfigInicial.AtividadesPossiveis)) {
@@ -237,11 +280,13 @@ void loop() {
       Estado = "E";
     } else {
       Estado = "G";
+      abastecimento.Atividade = Atividade;
+      stringDeAbastecimento += Atividade + ";";
     }
   } else if (Estado == "G") { // Cultura -- Opcional
     Serial.println("Estado G");
     String Cultura = Teclado.Ler_numero_teclado('G');
-    stringDeAbastecimento += Cultura + ";";
+    
     if (Cultura == "") {
       Estado = "H";
     } else if (!VerificacaoExistencia(Cultura, ConfigInicial.CulturasPossiveis)) {
@@ -256,6 +301,8 @@ void loop() {
       Estado = "F";
     } else {
       Estado = "H";
+      abastecimento.Cultura = Cultura;
+      stringDeAbastecimento += Cultura + ";";
     }
   } else if (Estado == "H") { // MODO de CONTROLE
     Serial.println("Estado H");
@@ -263,6 +310,7 @@ void loop() {
     int incremento = 0;
 
     Pulsos = 0;
+    Acumulado = 0;
     while (1) {
       delay(Intervalo);
       Serial.print("Pulsos: ");
@@ -296,10 +344,14 @@ void loop() {
     }
     Serial.println("Chegueiii");
     stringDeAbastecimento += String(Acumulado) + ";";
-    stringDeAbastecimento += String(timeClient.getFormattedTime()) + ";";
-
+    stringDeAbastecimento += String(getLocalTime()) + ";";
 
     Serial.println(stringDeAbastecimento);
+    abastecimento.Litros = Acumulado;
+    abastecimento.Cupom = Cupom;
+    abastecimento.Timestamp = getLocalTime();
+
+    Imprimir(abastecimento, ConfigInicial);
     Cupom++;
     Estado = "I";
   } else if (Estado == "I") { // Envio
@@ -308,7 +360,6 @@ void loop() {
   } else if (Estado == "Z") {
     Estado = "A";
   }
-
 
 
   // --------------- Revisão Buffer/Arquivo ---------------

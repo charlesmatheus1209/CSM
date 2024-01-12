@@ -68,7 +68,7 @@ bool EnviaParaServidor(String Abastecimento) {
     int httpResponseCode = http.POST("\"" + Abastecimento + "\"");   //Send the actual POST request
     Serial.println("HTTP response code");
     Serial.println(httpResponseCode);
-    if (httpResponseCode > 0) {
+    if (httpResponseCode == 200) {
 
       String response = http.getString();                       //Get the response to the request
 
@@ -76,7 +76,12 @@ bool EnviaParaServidor(String Abastecimento) {
       Serial.println(response);           //Print request answer
       delay(5000);
       return true;
-    } else {
+    } else if (httpCode > 0) {
+      String payload = http.getString();
+      Serial.println("Status Code: " + String(httpCode));
+      Serial.println(payload);
+    }
+    else {
       Serial.print("Error on sending POST: ");
       Serial.println(httpResponseCode);
       delay(5000);
@@ -87,14 +92,14 @@ bool EnviaParaServidor(String Abastecimento) {
     Serial.println("Error in WiFi connection");
     delay(5000);
     return false;
-  } 
+  }
 }
 
 void DeserializarConfigInicial(String txt) {
   ConfigInicial.Limpar();
   StaticJsonDocument<1024> doc;
   DeserializationError error = deserializeJson(doc, txt);
-  
+
   if (error)
     Serial.println(F("Failed to read Json, using default configuration"));
 

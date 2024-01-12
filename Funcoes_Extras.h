@@ -5,7 +5,7 @@
 #include "Teclado.h"
 #include "Credenciais.h"
 
-float CONST_CONVERSAO = 2*10;
+float CONST_CONVERSAO = 23;
 
 double CalculaVazao(int Pulsos, int Intervalo){
 

@@ -26,7 +26,7 @@ class Display{
         this->Tela.setCursor(pos3,2);
         this->Tela.print(s3);
         this->Tela.setCursor(pos4,3);
-        this->Tela.print(s4 + "W");
+        this->Tela.print(s4 + "W" + String(Buffer.size()));
       }else{
         this->Tela.clear();
         this->Tela.setCursor(pos1,0);
@@ -36,7 +36,7 @@ class Display{
         this->Tela.setCursor(pos3,2);
         this->Tela.print(s3);
         this->Tela.setCursor(pos4,3);
-        this->Tela.print(s4);
+        this->Tela.print(s4 + String(Buffer.size()));
       }
     }
     
