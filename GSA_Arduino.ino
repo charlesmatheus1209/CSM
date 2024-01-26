@@ -314,20 +314,38 @@ void loop() {
     Serial.println("Estado H");
 
     int incremento = 0;
+    int incrementodifzero = 0; //utilizado para contabilizar tempo despois que o acumulado é diferente de zero
+    bool imprime = false;
 
     Pulsos = 0;
     Acumulado = 0;
+    int AcumuladoAnterior = 0; //utilizado para contabilizar tempo despois que o acumulado é diferente de zero
     while (1) {
       delay(Intervalo);
       Serial.print("Pulsos: ");
       Serial.println(Pulsos);
 
-      if (Pulsos == 0) {
+      if (Pulsos == 0 && Acumulado == AcumuladoAnterior && Acumulado != 0) { // deve contar 10 segundo sem haver pulsos depois que o acumulado é igual do ultimo acumulado contabilizado
+                                                                             // conta tempo para encerrar qualquer abastecimento
+        incrementodifzero ++;
+
+        if (incrementodifzero >= 10000 / Intervalo) {
+          Serial.println("Limite de 10 segundos atingido");
+          Serial.println("Fim do abastecimento");
+          imprime = true;
+          break;
+        }
+      } else {
+        incrementodifzero = 0;
+      }
+
+      if (Pulsos == 0) { // contar 10 segundo do início do abastecimento -- implementar voltar ao início
         incremento ++;
 
         if (incremento >= 10000 / Intervalo) {
           Serial.println("Limite de 10 segundos atingido");
           Serial.println("Fim do abastecimento");
+          imprime = false;
           break;
         }
       } else {
@@ -348,18 +366,25 @@ void loop() {
       DisplayLCD.Mostra_msg("Volume: ", String(Acumulado), "", "", 0, 0, 0, 0);
 
     }
-    Serial.println("Chegueiii");
-    stringDeAbastecimento += String(Acumulado) + ";";
-    stringDeAbastecimento += String(getLocalTime()) + ";";
-
-    Serial.println(stringDeAbastecimento);
-    abastecimento.Litros = Acumulado;
-    abastecimento.Cupom = Cupom;
-    abastecimento.Timestamp = getLocalTime();
-
-    Imprimir(abastecimento, ConfigInicial);
-    Cupom++;
-    Estado = "I";
+    if (imprime == true){ //verifica se houve abastecimento 
+        
+      Serial.println("Chegueiii");
+      stringDeAbastecimento += String(Acumulado) + ";";
+      stringDeAbastecimento += String(getLocalTime()) + ";";
+  
+      Serial.println(stringDeAbastecimento);
+      abastecimento.Litros = Acumulado;
+      abastecimento.Cupom = Cupom;
+      abastecimento.Timestamp = getLocalTime();
+  
+      Imprimir(abastecimento, ConfigInicial);
+      Cupom++;
+      Estado = "I";
+    }
+    else {
+      Estado = "A";
+    }
+      
   } else if (Estado == "I") { // Envio
     EnviaAbastecimento(stringDeAbastecimento, 0);
     Estado = "Z";
