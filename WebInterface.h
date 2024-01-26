@@ -13,6 +13,8 @@ class ConfiguracaoInicial {
     String produto;
     String empresa;
     String posto;
+    String obrigatoriedadecultura; //definir se vai ser string ou bool ATENÇÃO ATENÇÃO ATENÇÃO-------------------------------------------------------
+    String obrigatoriedadeatividade; //definir se vai ser string ou bool ATENÇÃO ATENÇÃO ATENÇÃO-------------------------------------------------------
 
     std::vector<String> AtividadesPossiveis;
     std::vector<String> CulturasPossiveis;
@@ -114,6 +116,9 @@ void DeserializarConfigInicial(String txt) {
   ConfigInicial.posto = posto;
   JsonArray atividades = doc["atividades"];
   JsonArray culturas = doc["culturas"];
+
+  String obrigatoriedadecultura = doc["obrigatoriedadecultura"];//definir se vai ser string ou bool ATENÇÃO ATENÇÃO ATENÇÃO-------------------------------------------------------
+  String obrigatoriedadeatividade = doc["obrigatoriedadeatividade"];//definir se vai ser string ou bool ATENÇÃO ATENÇÃO ATENÇÃO-------------------------------------------------------
 
   for (String veiculo : veiculos) {
     ConfigInicial.VeiculosPossiveis.push_back(veiculo);
