@@ -5,10 +5,10 @@
 
 class Display{
   public:
-    LiquidCrystal_I2C Tela = LiquidCrystal_I2C(0x27,20,4);  // set the Display address to 0x27 for a 16 chars and 2 line display
+    LiquidCrystal_I2C Tela = LiquidCrystal_I2C(0x27,20,4); 
 
-    void Inicializa_display(){
-      this->Tela.init();                      // initialize the Display 
+    void Inicializa_display(){ // Inicializa o Display 
+      this->Tela.init();                      
       this->Tela.init();
       // Print a message to the Display.
       this->Tela.backlight();

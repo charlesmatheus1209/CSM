@@ -4,6 +4,7 @@
 #define Teclado_h
 
 #include <Keypad.h>
+#include "WebInterface.h"
 
 class TecladoMatricial {
   public:
@@ -37,10 +38,10 @@ class TecladoMatricial {
         DisplayLCD.Mostra_msg("", "Hodometro/Horimetro", "Digite: ", "", 0, 0, 0, 0);
       } else if (tp == 'F') {
         Serial.println("Digite a Atividade: ");
-        DisplayLCD.Mostra_msg("", "Atividade (Opcional)", "Digite: ", "", 0, 0, 0, 0);
+        DisplayLCD.Mostra_msg("", "Atividade", "Digite: ", "", 0, 0, 0, 0);
       } else if (tp == 'G') {
         Serial.println("Digite a Cultura: ");
-        DisplayLCD.Mostra_msg("", "Cultura (Opcional)", "Digite: ", "", 0, 0, 0, 0);
+        DisplayLCD.Mostra_msg("", "Cultura", "Digite: ", "", 0, 0, 0, 0);
       }
 
       char customKey = _keypad.getKey();
@@ -72,10 +73,10 @@ class TecladoMatricial {
 
               DisplayLCD.Mostra_msg("", "Hodometro/Horimetro", "Digite: " + NUMERO, "", 0, 0, 0, 0);
             } else if (tp == 'F') {
-              DisplayLCD.Mostra_msg("", "Atividade (Opcional)", "Digite: " + NUMERO, "", 0, 0, 0, 0);
+              DisplayLCD.Mostra_msg("", "Atividade", "Digite: " + NUMERO, "", 0, 0, 0, 0);
             } else if (tp == 'G') {
-              DisplayLCD.Mostra_msg("", "Cultura (Opcional)", "Digite: " + NUMERO, "", 0, 0, 0, 0);
-            } 
+              DisplayLCD.Mostra_msg("", "Cultura", "Digite: " + NUMERO, "", 0, 0, 0, 0);
+            }
           }
           if (customKey == '*') {
             NUMERO = "";

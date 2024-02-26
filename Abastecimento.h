@@ -6,13 +6,10 @@
 #include "SPIFFS.h"
 #include "WebInterface.h"
 
-/* You only need to format SPIFFS the first time you run a
-   test or else use the SPIFFS plugin to create a partition
-   https://github.com/me-no-dev/arduino-esp32fs-plugin */
 #define FORMAT_SPIFFS_IF_FAILED true
 
-class Abastecimento{
-  public: 
+class Abastecimento {
+  public:
     String Frentista = "";
     String Veiculo = "";
     String Hodometro_Horimetro = "";
@@ -22,7 +19,7 @@ class Abastecimento{
     String Litros = "";
     String Timestamp = "";
 
-    void Limpar(){
+    void Limpar() {
       this->Frentista = "";
       this->Veiculo = "";
       this->Hodometro_Horimetro = "";
@@ -37,6 +34,8 @@ class Abastecimento{
 String NomeArquivoArmazenamento = "/Abastecimentos.txt";
 Abastecimento abastecimento = Abastecimento();
 
+
+// ============================================== Inicio das Funções Padrão do SPIFFS ===================================
 
 String listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
 
@@ -159,59 +158,8 @@ void deleteFile(fs::FS &fs, const char * path) {
   }
 }
 
-void testFileIO(fs::FS &fs, const char * path) {
-  Serial.printf("Testing file I/O with %s\r\n", path);
+// ============================================== Fim das Funções Padrão do SPIFFS ===================================
 
-  static uint8_t buf[512];
-  size_t len = 0;
-  File file = fs.open(path, FILE_WRITE);
-  if (!file) {
-    Serial.println("- failed to open file for writing");
-    return;
-  }
-
-  size_t i;
-  Serial.print("- writing" );
-  uint32_t start = millis();
-  for (i = 0; i < 2048; i++) {
-    if ((i & 0x001F) == 0x001F) {
-      Serial.print(".");
-    }
-    file.write(buf, 512);
-  }
-  Serial.println("");
-  uint32_t end = millis() - start;
-  Serial.printf(" - %u bytes written in %u ms\r\n", 2048 * 512, end);
-  file.close();
-
-  file = fs.open(path);
-  start = millis();
-  end = start;
-  i = 0;
-  if (file && !file.isDirectory()) {
-    len = file.size();
-    size_t flen = len;
-    start = millis();
-    Serial.print("- reading" );
-    while (len) {
-      size_t toRead = len;
-      if (toRead > 512) {
-        toRead = 512;
-      }
-      file.read(buf, toRead);
-      if ((i++ & 0x001F) == 0x001F) {
-        Serial.print(".");
-      }
-      len -= toRead;
-    }
-    Serial.println("");
-    end = millis() - start;
-    Serial.printf("- %u bytes read in %u ms\r\n", flen, end);
-    file.close();
-  } else {
-    Serial.println("- failed to open file for reading");
-  }
-}
 
 
 
@@ -237,13 +185,15 @@ void EnviaPrimeiraLinha() {
   }
 }
 
-void atualizaArquivoConfigInicial (fs::FS &fs, String DadosSerializados){
-  deleteFile(fs, "/ConfigInicial.txt");
-  appendFile(fs, "/ConfigInicial.txt", DadosSerializados.c_str());
+void atualizaArquivoConfigInicial (fs::FS &fs, String DadosSerializados) {
+  if (DadosSerializados != "") {
+    deleteFile(fs, "/ConfigInicial.txt");
+    appendFile(fs, "/ConfigInicial.txt", DadosSerializados.c_str());
+  }
 }
 
 
-void atualizaConfigInicial(fs::FS &fs){
+void atualizaConfigInicial(fs::FS &fs) {
   String meuArquivo = readFileToString(fs, "/ConfigInicial.txt");
   DeserializarConfigInicial(meuArquivo);
 }
@@ -271,16 +221,23 @@ void mostraBuffer() {
   }
 }
 
-void atualizaArquivoCupom (fs::FS &fs, int Cupom){
-  deleteFile(fs, "/Cupom.txt");
-  appendFile(fs, "/Cupom.txt", String(Cupom).c_str());
+void atualizaArquivoCupom (fs::FS &fs, int Cupom) {
+  if (Cupom > 0) {
+    deleteFile(fs, "/Cupom.txt");
+    appendFile(fs, "/Cupom.txt", String(Cupom).c_str());
+  }
 }
 
-
-int atualizaCupom(fs::FS &fs){
+int atualizaCupom(fs::FS &fs) {
   String meuArquivo = readFileToString(fs, "/Cupom.txt");
+  Serial.println(meuArquivo.toInt());
   return meuArquivo.toInt();
 }
 
-
+void LimparTodosArquivos(fs::FS &fs){
+  Serial.println("Deletando todos os arquivos");
+  deleteFile(fs, "/Cupom.txt");
+  deleteFile(fs, "/ConfigInicial.txt");
+  deleteFile(SPIFFS, "/Abastecimentos.txt");
+}
 #endif    Abastecimento_h

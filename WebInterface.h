@@ -17,6 +17,11 @@ class ConfiguracaoInicial {
     std::vector<String> AtividadesPossiveis;
     std::vector<String> CulturasPossiveis;
 
+    bool ObrigatorioCultura;
+    bool ObrigatorioAtividades;
+
+    double saldo = 0;
+
     void Mostrar() {
       Serial.println("Veiculos Possíveis");
       for (String x : this->VeiculosPossiveis) {
@@ -41,12 +46,18 @@ class ConfiguracaoInicial {
       Serial.println("Produto: " + this->produto);
       Serial.println("Empresa: " + this->empresa);
       Serial.println("Posto: " + this->posto);
+      Serial.println("Obrigatorio Cultura: " + String(this->ObrigatorioCultura));
+      Serial.println("Obrigatorio Atividades: " + String(this->ObrigatorioAtividades));
+      Serial.println("Saldo: " + String(this->saldo));
     }
 
     void Limpar() {
       this->produto = "";
       this->empresa = "";
       this->posto  = "";
+      this->ObrigatorioCultura = false;
+      this->ObrigatorioAtividades = false;
+      this->saldo = 0;
       VeiculosPossiveis.clear();
       FrentistasPossiveis.clear();
       AtividadesPossiveis.clear();
@@ -58,39 +69,33 @@ ConfiguracaoInicial ConfigInicial = ConfiguracaoInicial();
 
 
 bool EnviaParaServidor(String Abastecimento) {
-  if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
+  if (WiFi.status() == WL_CONNECTED) { //Check WiFi 
 
     HTTPClient http;
 
-    http.begin("http://gsatestes.somee.com/PostTeste");  //Specify destination for HTTP request
-    http.addHeader("Content-Type", "text/json");             //Specify content-type header
+    http.begin("http://34.95.251.59:8080/gsa/controlador/envia_registros");  //Especifica destination for HTTP request
+    http.addHeader("Content-Type", "text/plain");             //Especifica content-type header
 
-    int httpResponseCode = http.POST("\"" + Abastecimento + "\"");   //Send the actual POST request
-    Serial.println("HTTP response code");
+    Serial.println("\"" + Abastecimento + ";" + WiFi.macAddress()  + "\"");
+    int httpResponseCode = http.POST(Abastecimento + ";" + WiFi.macAddress());   // Envia requisição
     Serial.println(httpResponseCode);
     if (httpResponseCode == 200) {
 
-      String response = http.getString();                       //Get the response to the request
+      String response = http.getString();                       //Get resposta da requisição
 
-      Serial.println(httpResponseCode);   //Print return code
-      Serial.println(response);           //Print request answer
+      Serial.println(httpResponseCode);   //Print codigo
+      Serial.println(response);           //Print resposta
       delay(5000);
       return true;
-    } else if (httpResponseCode > 0) {
+    } else  {
       String payload = http.getString();
       Serial.println("Status Code: " + String(httpResponseCode));
       Serial.println(payload);
       return false;
     }
-    else {
-      Serial.print("Error on sending POST: ");
-      Serial.println(httpResponseCode);
-      delay(5000);
-      return false;
-    }
     http.end();  //Free resources
   } else {
-    Serial.println("Error in WiFi connection");
+    Serial.println("Erro na conexao WiFi");
     delay(5000);
     return false;
   }
@@ -102,7 +107,7 @@ void DeserializarConfigInicial(String txt) {
   DeserializationError error = deserializeJson(doc, txt);
 
   if (error)
-    Serial.println(F("Failed to read Json, using default configuration"));
+    Serial.println(F("Falhs ao ler o Json"));
 
   JsonArray veiculos = doc["veiculos"];
   JsonArray frentistas = doc["frentistas"];
@@ -114,6 +119,12 @@ void DeserializarConfigInicial(String txt) {
   ConfigInicial.posto = posto;
   JsonArray atividades = doc["atividades"];
   JsonArray culturas = doc["culturas"];
+  bool obCultura = doc["obriga_cultura"];
+  ConfigInicial.ObrigatorioCultura = obCultura;
+  bool obAtivid = doc["obriga_atividade"];
+  ConfigInicial.ObrigatorioAtividades = obAtivid;
+  double saldo = doc["saldo"];
+  ConfigInicial.saldo = saldo;
 
   for (String veiculo : veiculos) {
     ConfigInicial.VeiculosPossiveis.push_back(veiculo);
@@ -131,33 +142,44 @@ void DeserializarConfigInicial(String txt) {
     ConfigInicial.CulturasPossiveis.push_back(cultura);
   }
 
+  
+  ConfigInicial.Mostrar();
 }
 
 String Config_Inicial() {
-  HTTPClient http;
-  http.begin("http://gsatestes.somee.com/InicializacaoControlador?id=" + String(ESP.getEfuseMac()));
-  int httpCode = http.GET();
+  if (WiFi.status() == WL_CONNECTED) {
 
-  if (httpCode == 200) { //Check for the returning code
-    String payload = http.getString();
-    Serial.println("Status Code: " + String(httpCode));
+    HTTPClient http;
+    http.begin("http://34.95.251.59:8080/gsa/controlador/busca_registros");
+    http.addHeader("Content-Type", "text/json");             //Especifica content-type header
 
-    DeserializarConfigInicial(payload);
+    int httpResponseCode = http.POST("{ \"serial\": \""+ WiFi.macAddress() +"\"}");   //Envia o POST
 
-    return String(payload);
+    if (httpResponseCode == 200) { //Check o código da resposta
+      String payload = http.getString();
+      Serial.println("Status Code: " + String(httpResponseCode));
+      Serial.println("payload: " + payload);
 
-  } else if (httpCode > 0) {
-    String payload = http.getString();
-    Serial.println("Status Code: " + String(httpCode));
-    Serial.println(payload);
+      DeserializarConfigInicial(payload);
+
+      return String(payload);
+
+    } else if (httpResponseCode > 0) {
+      String payload = http.getString();
+      Serial.println("Status Code: " + String(httpResponseCode));
+      Serial.println(payload);
+    }
+    else {
+      Serial.println("Erro na requisição HTTP ");
+    }
+
+    http.end(); //Free the resources
+    return "";
+  } else {
+    Serial.println("Erro na conexão WiFi");
+    delay(5000);
+    return "";
   }
-  else {
-    Serial.println("Error on HTTP request");
-  }
-
-  http.end(); //Free the resources
-  return "";
 }
-
 
 #endif    WebInterface_h

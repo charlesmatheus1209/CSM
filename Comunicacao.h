@@ -23,8 +23,7 @@ bool VerificacaoExistencia(String Dado, std::vector<String> Vetor) {
 }
 
 
-
-void Imprimir(Abastecimento abastecimento, ConfiguracaoInicial Config_Inicial) {
+void Imprimir(Abastecimento abastecimento, ConfiguracaoInicial Config_Inicial, Adafruit_Thermal printer) {
   Serial.println("Imprimindo");
   printer.setFont('B');
   printer.justify('C');
@@ -45,6 +44,7 @@ void Imprimir(Abastecimento abastecimento, ConfiguracaoInicial Config_Inicial) {
   printer.println("Cultura: " + abastecimento.Cultura);
   printer.println("Produto: " + Config_Inicial.produto);
   printer.println("Quantidade: " + abastecimento.Litros + "L");
+  printer.println("Saldo Anterior: " + String(Config_Inicial.saldo) + "L");
   printer.println("------------------------------");
   printer.println("------------------------------");
   printer.println("------------------------------");
